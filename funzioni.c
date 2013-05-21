@@ -1,8 +1,17 @@
 #include "funzioni.h"
-#include <stdio.h>
 #include <dirent.h>
-#include <sys/stat.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 
 
 void printdir(char *dir, int depth)
@@ -38,6 +47,7 @@ void printdir(char *dir, int depth)
     chdir("..");
     closedir(dp);
 }
+
 
 void sameFileCheck(char * fname1, char * fname2){
     
@@ -75,5 +85,142 @@ void sameFileCheck(char * fname1, char * fname2){
         fclose ( fp1 );
         fclose ( fp2 );
        }
+    
     return(0);
+}
+
+
+FILE *safe_fopen(const char *fname, const char *mode)
+{
+    FILE *f = NULL;
+    f = fopen(fname, mode);
+    
+    if (f == NULL) {
+        char emsg[1024];
+        sprintf(emsg, "Cannot open file: %s\t", fname);
+        perror(emsg);
+        exit(-1);
+    }
+    
+    return (f);
+}
+
+
+int check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size, off_t *f2_size)
+{
+    struct stat f1_stat, f2_stat;
+    
+    if((f1_name == NULL) || (f2_name == NULL)){
+        fprintf(stderr, "Invalid filename passed to function [check_same_size].\n");
+        return (-1);
+    }
+    
+    if((stat(f1_name, &f1_stat) != 0) || (stat(f2_name, &f2_stat) !=0)){
+        fprintf(stderr, "Cannot apply stat. [check_same_size].\n");
+        return (-1);
+    }
+    
+    if(f1_size != NULL){
+        *f1_size = f1_stat.st_size;
+    }
+    
+    if(f2_size != NULL){
+        *f2_size = f2_stat.st_size;
+    }
+    
+    return (f1_stat.st_size == f2_stat.st_size) ? 0 : 1;
+}
+
+
+int check_dup_plain(char *f1_name, char *f2_name, int block_size)
+{
+    if ((f1_name == NULL) || (f2_name == NULL)){
+        fprintf(stderr, "Invalid filename passed to function [check_dup_plain].\n");
+        return (-1);
+    }
+    
+    FILE *f1 = NULL, *f2 = NULL;
+    char f1_buff[block_size], f2_buff[block_size];
+    size_t rch1, rch2;
+    
+    if(check_same_size(f1_name, f2_name, NULL, NULL) == 1){
+        return (1);
+    }
+    
+    f1 = safe_fopen(f1_name, "r");
+    f2 = safe_fopen(f2_name, "r");
+    
+    while(!feof(f1) && !feof(f2)){
+        rch1 = fread(f1_buff, 1, block_size, f1);
+        rch2 = fread(f2_buff, 1, block_size, f2);
+        if(rch1 != rch2){
+            fprintf(stderr, "Invalid reading from file. Cannot continue. [check_dup_plain].\n");
+            return (-1);
+        }
+        while(rch1-->0){
+            if(f1_buff[rch1] != f2_buff[rch1]){
+                return (1);
+            }
+        }
+    }
+    
+    fclose(f1);
+    fclose(f2);
+    
+    return (0);
+}
+
+
+int check_dup_memmap(char *f1_name, char *f2_name)
+{
+    struct stat f1_stat, f2_stat;
+    char *f1_array = NULL, *f2_array = NULL;
+    off_t f1_size, f2_size;
+    int f1_des, f2_des, cont, res;
+    
+    if((f1_name == NULL) || (f2_name == NULL)){
+        fprintf(stderr, "Invalid filename passed to function [check_dup_memmap].\n");
+        return (-1);    
+    }
+    
+    if(check_same_size(f1_name, f2_name, &f1_size, &f2_size) == 1){
+        return (1);
+    }
+    
+    f1_des = open(f1_name, O_RDONLY);
+    f2_des = open(f2_name, O_RDONLY);
+    
+    if((f1_des == -1) || (f2_des == -1)){
+        perror("Cannot open file");
+        exit(-1);       
+    }
+    
+    f1_array = mmap(0, f1_size * sizeof(*f1_array), PROT_READ, MAP_SHARED, f1_des, 0);
+    
+    if(f1_array == NULL){
+        fprintf(stderr, "Cannot map file to memory [check_dup_memmap].\n");
+        return (-1);
+    }
+    
+    f2_array = mmap(0, f2_size * sizeof(*f2_array), PROT_READ, MAP_SHARED, f2_des, 0);
+    
+    if(f2_array == NULL){
+        fprintf(stderr, "Cannot map file to memory [check_dup_memmap].\n");
+        return (-1);
+    }
+    
+    cont = f1_size;
+    res = 0;
+    
+    while(cont-->0){
+        if(f1_array[cont]!=f2_array[cont]){
+            res = 1;
+            break;
+        }
+    }
+    
+    munmap((void*) f1_array, f1_size * sizeof(*f1_array));
+    munmap((void*) f2_array, f2_size * sizeof(*f2_array));
+    
+    return res;
 }
