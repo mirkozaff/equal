@@ -49,7 +49,7 @@ void printdir(char *dir, int depth)
 }
 
 
-void sameFileCheck(char * fname1, char * fname2){
+boolean sameFileCheck(char * fname1, char * fname2){
     
     FILE *fp1, *fp2;
     int ch1, ch2;
@@ -59,12 +59,12 @@ void sameFileCheck(char * fname1, char * fname2){
 
     if ( fp1 == NULL )
        {
-       printf("Cannot open %s for reading ", fname1 );
+       printf("Non riesco ad aprire %s per la letturag\n", fname1 );
        exit(1);
        }
     else if (fp2 == NULL)
        {
-       printf("Cannot open %s for reading ", fname2 );
+       printf("Non riesco ad aprire %s per la lettura\n", fname2 );
        exit(1);
        }
     else {
@@ -76,21 +76,23 @@ void sameFileCheck(char * fname1, char * fname2){
             ch1 = getc(fp1);
             ch2 = getc(fp2) ;
         }
-
-        if (ch1 == ch2)
-            printf("Files are identical");
-        else if (ch1 !=  ch2)
-            printf("Files are Not identical");
-
+        
         fclose ( fp1 );
         fclose ( fp2 );
-       }
+
+        if (ch1 == ch2){
+            return TRUE;
+        }
+        else if (ch1 !=  ch2){            
+            return FALSE;
+        }    
+    }
 }
     
     
 
 
-FILE *safe_fopen(const char *fname, const char *mode)
+void safe_fopen(const char *fname, const char *mode)
 {
     FILE *f = NULL;
     f = fopen(fname, mode);
@@ -101,12 +103,12 @@ FILE *safe_fopen(const char *fname, const char *mode)
         perror(emsg);
         exit(-1);
     }
+    fclose(f);
     
-    return (f);
 }
 
 
-int check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size, off_t *f2_size)
+boolean check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size, off_t *f2_size)
 {
     struct stat f1_stat, f2_stat;
     
@@ -128,10 +130,15 @@ int check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size, of
         *f2_size = f2_stat.st_size;
     }
     
-    return (f1_stat.st_size == f2_stat.st_size) ? 0 : 1;
+    if(f1_stat.st_size == f2_stat.st_size) {
+        return TRUE;
+    }
+    else {
+        return FALSE;
+    }
 }
 
-
+/*
 int check_dup_plain(char *f1_name, char *f2_name, int block_size)
 {
     if ((f1_name == NULL) || (f2_name == NULL)){
@@ -169,7 +176,7 @@ int check_dup_plain(char *f1_name, char *f2_name, int block_size)
     
     return (0);
 }
-
+*/
 
 int check_dup_memmap(char *f1_name, char *f2_name)
 {
@@ -241,4 +248,76 @@ boolean is_dir(const char* path) {
         return TRUE;
     else
         return FALSE;
+}
+
+void stampadir(char *path){
+    
+    DIR * d;
+	struct dirent *dir;
+	d = opendir(path);
+	if (d != NULL)  {
+		while ((dir = readdir(d)) != NULL) {
+			if(strcmp(".", dir -> d_name) == 0 || strcmp("..", dir -> d_name) == 0){
+				continue;
+			}
+			printf("%s\n", dir -> d_name);
+		}
+
+    closedir(d);
+ 	}
+}
+
+boolean is_binary(char * fname){
+    
+    FILE *fp;
+    int ch;
+    
+    fp = fopen( fname,  "r" );
+    
+
+    if ( fp == NULL )
+       {
+       printf("Cannot open %s for reading ", fname);
+       exit(1);
+       }
+    else {
+        ch  =  getc( fp ) ;
+        while( (ch!=EOF) && (ch >= 0) && (ch <= 127)){
+            ch = getc(fp);
+        }
+        if(ch == EOF) {
+           return FALSE;
+        }
+        else{
+            return TRUE;
+        }            
+    }
+}
+
+void textDiff(char * fname1, char * fname2){
+    
+	char c1[1000]; 
+	char c2[1000];
+	int lineCount = 0;
+    
+    FILE *f1 = NULL, *f2 = NULL;
+	
+	f1 = fopen(fname1, "r"); 
+	f2 = fopen (fname2, "r");
+
+	printf("\n");
+	
+	while(fgets(c1,1000,f1) != '\0' && fgets(c2,1000,f2)!= '\0'){
+		lineCount++;
+		if(strcmp(c1, c2) != 0){
+            printf("---------------\n");
+            printf("Linea %d diversa:\n", lineCount);
+            printf("%s\n",c1);
+            printf("%s\n",c2);
+            printf("---------------\n");
+        }
+    }
+    
+	fclose(f1);
+	fclose(f2);
 }
