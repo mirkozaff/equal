@@ -67,5 +67,10 @@ boolean is_binary(char * fname);
 
 void textDiff(char * fname1, char * fname2);
 
+
+boolean twoFilesCompare(char *fname1, char *fname2);
+
+boolean scanDir(char *dir, char* filename);
+
 #endif	/* FUNZIONI_H */
 

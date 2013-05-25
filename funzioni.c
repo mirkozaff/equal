@@ -15,13 +15,12 @@
 
 
 void printdir(char *dir, int depth)
-{
+{/*
     DIR * dp;
-    DIR * d1;
-    DIR * d2;
-    
+        
     struct dirent *entry;
     struct stat statbuf;
+    
     if((dp = opendir(dir)) == NULL) {
         fprintf(stderr,"cannot open directory: %s\n", dir);
         return;
@@ -38,7 +37,7 @@ void printdir(char *dir, int depth)
             }
             printf("%*s%s/\n", depth,"", entry->d_name);
             /* Recurse at a new indent level */
-            printdir(entry->d_name,depth+4);
+    /*        printdir(entry->d_name,depth+4);
         }
         else {
         	printf("%*s%s\n", depth, "", entry->d_name);
@@ -46,7 +45,7 @@ void printdir(char *dir, int depth)
     }
     chdir("..");
     closedir(dp);
-}
+*/}
 
 
 boolean sameFileCheck(char * fname1, char * fname2){
@@ -177,7 +176,7 @@ int check_dup_plain(char *f1_name, char *f2_name, int block_size)
     return (0);
 }
 */
-
+/*
 int check_dup_memmap(char *f1_name, char *f2_name)
 {
     struct stat f1_stat, f2_stat;
@@ -230,7 +229,7 @@ int check_dup_memmap(char *f1_name, char *f2_name)
     munmap((void*) f2_array, f2_size * sizeof(*f2_array));
     
     return res;
-}
+}*/
 
 boolean is_file(const char* path) {
     struct stat buf;
@@ -320,4 +319,82 @@ void textDiff(char * fname1, char * fname2){
     
 	fclose(f1);
 	fclose(f2);
+}
+
+boolean scanDir(char *dir, char* filename){
+    
+    DIR * dp;
+        
+    struct dirent *entry;
+    struct stat statbuf;
+    
+    if((dp = opendir(dir)) == NULL) {
+        fprintf(stderr,"cannot open directory: %s\n", dir);
+        return;
+    }
+
+    chdir(dir);
+
+    while((entry = readdir(dp)) != NULL) {
+        lstat(entry->d_name,&statbuf);
+        if(S_ISDIR(statbuf.st_mode)) {
+            continue;
+        }
+        if(S_ISREG(statbuf.st_mode)){
+            
+            if(strcmp(filename, entry->d_name) == 0){
+                if(twoFilesCompare(filename, entry-> d_name)){
+                    chdir("..");
+                    closedir(dp);
+                    return TRUE;
+                }
+                else{
+                    chdir("..");
+                    closedir(dp);
+                    return FALSE;
+                }
+            }
+        }
+    }
+    printf("File non presente nella directory\n");
+    exit(-1);    
+}
+
+boolean twoFilesCompare(char *fname1, char *fname2){
+    
+    safe_fopen(fname1, "r");
+    safe_fopen(fname2, "r");
+
+    if(is_binary(fname1) && is_binary(fname2)){
+
+        if(!check_same_size(fname1, fname2, NULL, NULL)){
+            return FALSE;
+        }
+        else{
+            if(sameFileCheck(fname1, fname2)){
+                return TRUE;
+            }
+            else{
+                return FALSE;
+            }
+        }
+    }
+    else if(!is_binary(fname1) && !is_binary(fname2)){
+
+        if(!check_same_size(fname1, fname2, NULL, NULL)){
+            return FALSE;
+        }
+        else{
+            if(sameFileCheck(fname1, fname2)){                    
+                return TRUE;
+            }
+            else{
+                textDiff(fname1, fname2);
+                return FALSE;
+            }
+        }
+    }
+    else{
+        return FALSE;
+    }
 }

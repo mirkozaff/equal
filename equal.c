@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include "funzioni.h"
 
 
@@ -15,53 +16,42 @@ int main(int argc, char *argv[]){
         
     if(is_file(fname1) && is_file(fname2)){
         
-        safe_fopen(fname1, "r");
-        safe_fopen(fname2, "r");
-
-        if(is_binary(fname1) && is_binary(fname2)){
-        
-            if(check_same_size(fname1, fname2, NULL, NULL)){
-                printf("I Files non sono uguali\n");
-                return (1);
-            }
-            else{
-                if(sameFileCheck(fname1, fname2)){
-                    printf("I Files sono uguali\n");
-                    return (0);
-                }
-                else{
-                    printf("I Files non sono uguali\n");
-                    return (1);
-                }
-            }
-        }
-        else if(!is_binary(fname1) && !is_binary(fname2)){
-            
-            if(check_same_size(fname1, fname2, NULL, NULL)){
-                printf("I Files non sono uguali\n");
-                return (1);
-            }
-            else{
-                if(sameFileCheck(fname1, fname2)){                    
-                    printf("I Files sono uguali\n");
-                    return (0);
-                }
-                else{
-                    textDiff(fname1, fname2);
-                    printf("I Files non sono uguali\n");
-                    return (1);
-                }
-            }
+        if(twoFilesCompare(fname1, fname2)){
+            printf("I Files sono uguali\n");
+            return (0);
         }
         else{
-            printf("I Files non sono uguali\n");
+            printf("I Files sono diversi\n");
             return (1);
-       }
+        }
+    }
+    
+    if(is_file(fname1) && is_dir(fname2)){
+        
+        if(scanDir(fname2, fname1)){
+            printf("I file %s e %s/%s sono uguali\n", fname1, fname2, fname1);
+            return (0);
+        }
+        else{
+            printf("I file %s e %s/%s sono diversi\n", fname1, fname2, fname1);
+            return (1);
+        }
+    }
+    
+    if(is_dir(fname1) && is_file(fname2)){
+        
+        if(scanDir(fname1, fname2)){
+            printf("I file %s e %s/%s sono uguali\n", fname2, fname1, fname2);
+            return (0);
+        }
+        else{
+            printf("I file %s e %s/%s sono diversi\n", fname2, fname1, fname2);
+            return (1);
+        }
+    
     }
     
     if(is_dir(fname1) && is_dir(fname2)){}
-    if(is_dir(fname1) && is_file(fname2)){}
-    if(is_file(fname1) && is_dir(fname2)){}
     
     
     
@@ -86,5 +76,5 @@ int main(int argc, char *argv[]){
     //sameFileCheck(fname1, fname2);
 
     //printf("result: %d\n",check_dup_memmap(fname1, fname2));
-    return (0);
+    return (EXIT_FAILURE);
 }
