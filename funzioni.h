@@ -57,5 +57,9 @@ int check_dup_plain(char *f1_name, char *f2_name, int block_size);
 **/
 int check_dup_memmap(char *f1_name, char *f2_name);
 
+boolean is_dir(const char* path);
+        
+boolean is_file(const char* path);
+
 #endif	/* FUNZIONI_H */
 

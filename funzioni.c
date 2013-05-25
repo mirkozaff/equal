@@ -1,4 +1,3 @@
-#include "funzioni.h"
 #include <dirent.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -11,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "funzioni.h"
 
 
 
@@ -85,9 +85,9 @@ void sameFileCheck(char * fname1, char * fname2){
         fclose ( fp1 );
         fclose ( fp2 );
        }
-    
-    return(0);
 }
+    
+    
 
 
 FILE *safe_fopen(const char *fname, const char *mode)
@@ -97,7 +97,7 @@ FILE *safe_fopen(const char *fname, const char *mode)
     
     if (f == NULL) {
         char emsg[1024];
-        sprintf(emsg, "Cannot open file: %s\t", fname);
+        sprintf(emsg, "Cannot open file: %s", fname);
         perror(emsg);
         exit(-1);
     }
@@ -147,8 +147,8 @@ int check_dup_plain(char *f1_name, char *f2_name, int block_size)
         return (1);
     }
     
-    f1 = safe_fopen(f1_name, "r");
-    f2 = safe_fopen(f2_name, "r");
+    f1 = safe_fopen(f1_name, O_RDONLY);
+    f2 = safe_fopen(f2_name, O_RDONLY);
     
     while(!feof(f1) && !feof(f2)){
         rch1 = fread(f1_buff, 1, block_size, f1);
@@ -223,4 +223,22 @@ int check_dup_memmap(char *f1_name, char *f2_name)
     munmap((void*) f2_array, f2_size * sizeof(*f2_array));
     
     return res;
+}
+
+boolean is_file(const char* path) {
+    struct stat buf;
+    stat(path, &buf);
+    if(S_ISREG(buf.st_mode))
+        return TRUE;
+    else
+        return FALSE;
+}
+
+boolean is_dir(const char* path) {
+    struct stat buf;
+    stat(path, &buf);
+    if(S_ISDIR(buf.st_mode))
+        return TRUE;
+    else
+        return FALSE;
 }
