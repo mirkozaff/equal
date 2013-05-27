@@ -33,7 +33,7 @@ void safe_fopen(const char *fname, const char *mode);
 * 0 Se hanno la stessa dimensione.
 * 1 Se non hanno la stessa dimensione.
 **/
-boolean check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size, off_t *f2_size);
+boolean check_same_size(char *f1_name, char *f2_name, off_t *f1_size, off_t *f2_size);
 
 
 /*

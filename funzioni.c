@@ -77,7 +77,7 @@ void safe_fopen(const char *fname, const char *mode)
 }
 
 
-boolean check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size, off_t *f2_size)
+boolean check_same_size(char *f1_name, char *f2_name, off_t *f1_size, off_t *f2_size)
 {
     struct stat f1_stat, f2_stat;
     
@@ -105,6 +105,9 @@ boolean check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size
         return TRUE;
     }
     else {
+        if(!is_binary(f1_name) && !is_binary(f2_name)){
+            textDiff(f1_name, f2_name);
+        }
         return FALSE;
     }
 }
