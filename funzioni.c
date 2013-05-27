@@ -284,14 +284,10 @@ void scorriCartelle(char *dir1, char *dir2){
         
         stat(entry1->d_name,&statbuf1);
         
+        /* Ignora le cartelle ".." e "." */
         if(strcmp(".", entry1-> d_name) == 0 || strcmp("..", entry1->d_name) == 0){
                 continue;
         
-        }
-        
-        
-        if(entry1-> d_name[strlen(entry1-> d_name) -1] == '~'){
-            continue;
         }
         
         if(S_ISREG(statbuf1.st_mode)){
