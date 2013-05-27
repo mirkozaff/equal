@@ -11,41 +11,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "funzioni.h"
-
-
-
-void printdir(char *dir, int depth)
-{/*
-    DIR * dp;
-        
-    struct dirent *entry;
-    struct stat statbuf;
-    
-    if((dp = opendir(dir)) == NULL) {
-        fprintf(stderr,"cannot open directory: %s\n", dir);
-        return;
-    }
-
-    chdir(dir);
-
-    while((entry = readdir(dp)) != NULL) {
-        lstat(entry->d_name,&statbuf);
-        if(S_ISDIR(statbuf.st_mode)) {
-            // Found a directory, but ignore . and ..
-            if(strcmp(".", entry-> d_name) == 0 || strcmp("..", entry->d_name) == 0){
-                continue;
-            }
-            printf("%*s%s/\n", depth,"", entry->d_name);
-            /* Recurse at a new indent level */
-    /*        printdir(entry->d_name,depth+4);
-        }
-        else {
-        	printf("%*s%s\n", depth, "", entry->d_name);
-        }
-    }
-    chdir("..");
-    closedir(dp);
-*/}
+#include <stdarg.h>
+#include <syslog.h>
 
 
 boolean sameFileCheck(char * fname1, char * fname2){
@@ -58,13 +25,15 @@ boolean sameFileCheck(char * fname1, char * fname2){
 
     if ( fp1 == NULL )
        {
-       printf("Non riesco ad aprire %s per la letturag\n", fname1 );
-       exit(1);
+       printf("Non riesco ad aprire %s per la lettura\n", fname1 );
+       syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", fname1 );
+       exit(-1);
        }
     else if (fp2 == NULL)
        {
        printf("Non riesco ad aprire %s per la lettura\n", fname2 );
-       exit(1);
+       syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", fname2 );
+       exit(-1);
        }
     else {
         ch1  =  getc( fp1 ) ;
@@ -98,8 +67,9 @@ void safe_fopen(const char *fname, const char *mode)
     
     if (f == NULL) {
         char emsg[1024];
-        sprintf(emsg, "Cannot open file: %s", fname);
+        sprintf(emsg, "Non riesco ad aprire %s per la lettura", fname);
         perror(emsg);
+        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", fname);
         exit(-1);
     }
     fclose(f);
@@ -112,12 +82,14 @@ boolean check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size
     struct stat f1_stat, f2_stat;
     
     if((f1_name == NULL) || (f2_name == NULL)){
-        fprintf(stderr, "Invalid filename passed to function [check_same_size].\n");
+        fprintf(stderr, "filename non valido passato alla funzione [check_same_size].\n");
+        syslog(LOG_USER, "filename non valido passato alla funzione [check_same_size].");
         return (-1);
     }
     
     if((stat(f1_name, &f1_stat) != 0) || (stat(f2_name, &f2_stat) !=0)){
-        fprintf(stderr, "Cannot apply stat. [check_same_size].\n");
+        fprintf(stderr, "Con riesco ad appilcare stat. [check_same_size].\n");
+        syslog(LOG_USER, "Non riesco ad appilcare stat. [check_same_size].");
         return (-1);
     }
     
@@ -137,100 +109,6 @@ boolean check_same_size(const char *f1_name, const char *f2_name, off_t *f1_size
     }
 }
 
-/*
-int check_dup_plain(char *f1_name, char *f2_name, int block_size)
-{
-    if ((f1_name == NULL) || (f2_name == NULL)){
-        fprintf(stderr, "Invalid filename passed to function [check_dup_plain].\n");
-        return (-1);
-    }
-    
-    FILE *f1 = NULL, *f2 = NULL;
-    char f1_buff[block_size], f2_buff[block_size];
-    size_t rch1, rch2;
-    
-    if(check_same_size(f1_name, f2_name, NULL, NULL) == 1){
-        return (1);
-    }
-    
-    f1 = safe_fopen(f1_name, O_RDONLY);
-    f2 = safe_fopen(f2_name, O_RDONLY);
-    
-    while(!feof(f1) && !feof(f2)){
-        rch1 = fread(f1_buff, 1, block_size, f1);
-        rch2 = fread(f2_buff, 1, block_size, f2);
-        if(rch1 != rch2){
-            fprintf(stderr, "Invalid reading from file. Cannot continue. [check_dup_plain].\n");
-            return (-1);
-        }
-        while(rch1-->0){
-            if(f1_buff[rch1] != f2_buff[rch1]){
-                return (1);
-            }
-        }
-    }
-    
-    fclose(f1);
-    fclose(f2);
-    
-    return (0);
-}
-*/
-/*
-int check_dup_memmap(char *f1_name, char *f2_name)
-{
-    struct stat f1_stat, f2_stat;
-    char *f1_array = NULL, *f2_array = NULL;
-    off_t f1_size, f2_size;
-    int f1_des, f2_des, cont, res;
-    
-    if((f1_name == NULL) || (f2_name == NULL)){
-        fprintf(stderr, "Invalid filename passed to function [check_dup_memmap].\n");
-        return (-1);    
-    }
-    
-    if(check_same_size(f1_name, f2_name, &f1_size, &f2_size) == 1){
-        return (1);
-    }
-    
-    f1_des = open(f1_name, O_RDONLY);
-    f2_des = open(f2_name, O_RDONLY);
-    
-    if((f1_des == -1) || (f2_des == -1)){
-        perror("Cannot open file");
-        exit(-1);       
-    }
-    
-    f1_array = mmap(0, f1_size * sizeof(*f1_array), PROT_READ, MAP_SHARED, f1_des, 0);
-    
-    if(f1_array == NULL){
-        fprintf(stderr, "Cannot map file to memory [check_dup_memmap].\n");
-        return (-1);
-    }
-    
-    f2_array = mmap(0, f2_size * sizeof(*f2_array), PROT_READ, MAP_SHARED, f2_des, 0);
-    
-    if(f2_array == NULL){
-        fprintf(stderr, "Cannot map file to memory [check_dup_memmap].\n");
-        return (-1);
-    }
-    
-    cont = f1_size;
-    res = 0;
-    
-    while(cont-->0){
-        if(f1_array[cont]!=f2_array[cont]){
-            res = 1;
-            break;
-        }
-    }
-    
-    munmap((void*) f1_array, f1_size * sizeof(*f1_array));
-    munmap((void*) f2_array, f2_size * sizeof(*f2_array));
-    
-    return res;
-}*/
-
 boolean is_file(const char* path) {
     struct stat buf;
     stat(path, &buf);
@@ -249,23 +127,6 @@ boolean is_dir(const char* path) {
         return FALSE;
 }
 
-void stampadir(char *path){
-    
-    DIR * d;
-	struct dirent *dir;
-	d = opendir(path);
-	if (d != NULL)  {
-		while ((dir = readdir(d)) != NULL) {
-			if(strcmp(".", dir -> d_name) == 0 || strcmp("..", dir -> d_name) == 0){
-				continue;
-			}
-			printf("%s\n", dir -> d_name);
-		}
-
-    closedir(d);
- 	}
-}
-
 boolean is_binary(char * fname){
     
     FILE *fp;
@@ -276,8 +137,9 @@ boolean is_binary(char * fname){
 
     if ( fp == NULL )
        {
-       printf("Cannot open %s for reading ", fname);
-       exit(1);
+       printf("Non riesco ad aprire %s per la lettura", fname);
+       syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", fname);
+       exit(-1);
        }
     else {
         ch  =  getc( fp ) ;
@@ -329,14 +191,15 @@ boolean scanDir(char *dir, char* filename){
     struct stat statbuf;
     
     if((dp = opendir(dir)) == NULL) {
-        fprintf(stderr,"cannot open directory: %s\n", dir);
-        return;
+        fprintf(stderr,"Non riesco ad aprire %s per la lettura: \n", dir);
+        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", dir);
+        exit(-1); 
     }
 
     chdir(dir);
 
     while((entry = readdir(dp)) != NULL) {
-        lstat(entry->d_name,&statbuf);
+        stat(entry->d_name,&statbuf);
         if(S_ISDIR(statbuf.st_mode)) {
             continue;
         }
@@ -356,7 +219,9 @@ boolean scanDir(char *dir, char* filename){
             }
         }
     }
+    
     printf("File non presente nella directory\n");
+    syslog(LOG_USER, "File non presente nella directory");
     exit(-1);    
 }
 
@@ -397,4 +262,139 @@ boolean twoFilesCompare(char *fname1, char *fname2){
     else{
         return FALSE;
     }
+}
+
+void scorriCartelle(char *dir1, char *dir2){
+    
+    DIR * dp1;
+        
+    struct dirent *entry1;
+    struct stat statbuf1;
+        
+    if((dp1 = opendir(dir1)) == NULL) {
+        fprintf(stderr,"Non riesco ad aprire %s per la lettura: \n", dir1);
+        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", dir1);
+        exit(-1); 
+    }
+
+    while((entry1 = readdir(dp1)) != NULL) {
+        
+        stat(entry1->d_name,&statbuf1);
+        
+        if(strcmp(".", entry1-> d_name) == 0 || strcmp("..", entry1->d_name) == 0){
+                continue;
+        
+        }
+        
+        
+        if(entry1-> d_name[strlen(entry1-> d_name) -1] == '~'){
+            continue;
+        }
+        
+        if(S_ISREG(statbuf1.st_mode)){
+            if(findFile(entry1->d_name, dir2)){
+                if(!twoFilesCompare(superStringsCat(dir1, "/", entry1->d_name, NULL), superStringsCat(dir2, "/", entry1->d_name, NULL))){
+                    printf("I Files %s/%s e %s/%s sono diversi\n", dir1, entry1->d_name, dir2, entry1->d_name);
+                }                
+            }    
+            else{
+                printf("Solo in %s: %s\n", dir1, entry1->d_name);
+            }           
+        }        
+        
+        if(S_ISDIR(statbuf1.st_mode)) { 
+            if(findDir(entry1->d_name, dir2)){
+                printf("Sottodirectory in comune: %s/%s e %s/%s\n", dir1, entry1->d_name, dir2, entry1->d_name);
+            }
+            else{
+                printf("Solo in %s: %s\n", dir1, entry1->d_name);
+            }
+        }
+    }      
+}
+
+boolean findDir(char *dir1, char* dir2){
+    
+    DIR *dp2;
+    
+    struct dirent *entry2;
+    struct stat statbuf2;
+    
+    if((dp2 = opendir(dir2)) == NULL) {
+        fprintf(stderr,"Non riesco ad aprire %s per la lettura: \n", dir2);
+        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", dir2);
+        exit(-1); 
+    }
+    
+    while((entry2 = readdir(dp2)) != NULL){
+        stat(entry2->d_name,&statbuf2);
+        if(S_ISDIR(statbuf2.st_mode)){
+            if(strcmp(dir1, entry2->d_name) == 0){
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
+boolean findFile(char *f1, char* dir2){
+    
+    DIR *dp2;
+    
+    struct dirent *entry2;
+    struct stat statbuf2;
+    
+    if((dp2 = opendir(dir2)) == NULL) {
+        fprintf(stderr,"Non riesco ad aprire %s per la lettura: \n", dir2);
+        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", dir2);
+        exit(-1); 
+    }
+    
+    while((entry2 = readdir(dp2)) != NULL){
+        lstat(entry2->d_name,&statbuf2);
+        if(S_ISREG(statbuf2.st_mode)){
+            if(strcmp(f1, entry2->d_name) == 0){
+                
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
+char *superStringsCat(char *String1, ...){
+    
+	va_list List;	
+	va_start (List, String1);
+	
+	unsigned int Size;
+	
+	Size = strlen (String1) + 1;
+	
+	char *s;
+	s = String1;
+	
+	do
+	{
+		Size += strlen (s) + 1;
+	}while ((s = va_arg (List, char*)) != NULL);
+	
+	char *Merge;
+	Merge = (char*)malloc (sizeof (char) * Size);
+	char *sMerge = Merge;
+
+	va_end (List);
+	va_start (List, String1);
+
+	s = String1;
+	
+	do
+	{
+		strcpy (Merge, s);
+		Merge += strlen (s);
+	}while ((s = va_arg (List, char*)) != NULL);
+	
+	va_end (List);
+	
+	return sMerge;
 }
