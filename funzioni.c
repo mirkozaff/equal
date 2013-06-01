@@ -23,16 +23,18 @@ boolean sameFileCheck(char * fname1, char * fname2){
     fp1 = fopen( fname1,  "r" );
     fp2 = fopen( fname2,  "r" ) ;
 
+    syslog(LOG_INFO, "Verifica stesso file per %s e %s", fname1, fname2);
+    
     if ( fp1 == NULL )
        {
        printf("Non riesco ad aprire %s per la lettura\n", fname1 );
-       syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", fname1 );
+       syslog(LOG_ERR, "Non riesco ad aprire %s per la lettura", fname1 );
        exit(-1);
        }
     else if (fp2 == NULL)
        {
        printf("Non riesco ad aprire %s per la lettura\n", fname2 );
-       syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", fname2 );
+       syslog(LOG_ERR, "Non riesco ad aprire %s per la lettura", fname2 );
        exit(-1);
        }
     else {
@@ -69,7 +71,7 @@ void safe_fopen(const char *fname, const char *mode)
         char emsg[1024];
         sprintf(emsg, "Non riesco ad aprire %s per la lettura", fname);
         perror(emsg);
-        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", fname);
+        syslog(LOG_ERR, "Non riesco ad aprire %s per la lettura", fname);
         exit(-1);
     }
     fclose(f);
@@ -81,15 +83,17 @@ boolean check_same_size(char *f1_name, char *f2_name, off_t *f1_size, off_t *f2_
 {
     struct stat f1_stat, f2_stat;
     
+    syslog(LOG_INFO, "Verifica stesso file per %s e %s", f1_name, f2_name);
+    
     if((f1_name == NULL) || (f2_name == NULL)){
         fprintf(stderr, "filename non valido passato alla funzione [check_same_size].\n");
-        syslog(LOG_USER, "filename non valido passato alla funzione [check_same_size].");
+        syslog(LOG_ERR, "filename non valido passato alla funzione [check_same_size].");
         return (-1);
     }
     
     if((stat(f1_name, &f1_stat) != 0) || (stat(f2_name, &f2_stat) !=0)){
         fprintf(stderr, "Con riesco ad appilcare stat. [check_same_size].\n");
-        syslog(LOG_USER, "Non riesco ad appilcare stat. [check_same_size].");
+        syslog(LOG_ERR, "Non riesco ad appilcare stat. [check_same_size].");
         return (-1);
     }
     
@@ -141,12 +145,12 @@ boolean is_binary(char * fname){
     if ( fp == NULL )
        {
        printf("Non riesco ad aprire %s per la lettura", fname);
-       syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", fname);
+       syslog(LOG_ERR, "Non riesco ad aprire %s per la lettura", fname);
        exit(-1);
        }
     else {
         ch  =  getc( fp ) ;
-        while( (ch!=EOF) && (ch >= 0) && (ch <= 127)){
+        while( (ch!=EOF) && (ch <= 127)){
             ch = getc(fp);
         }
         if(ch == EOF) {
@@ -195,7 +199,7 @@ boolean scanDir(char *dir, char* filename){
     
     if((dp = opendir(dir)) == NULL) {
         fprintf(stderr,"Non riesco ad aprire %s per la lettura: \n", dir);
-        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", dir);
+        syslog(LOG_ERR, "Non riesco ad aprire %s per la lettura", dir);
         exit(-1); 
     }
 
@@ -224,7 +228,7 @@ boolean scanDir(char *dir, char* filename){
     }
     
     printf("File non presente nella directory\n");
-    syslog(LOG_USER, "File non presente nella directory");
+    syslog(LOG_ERR, "File non presente nella directory");
     exit(-1);    
 }
 
@@ -272,17 +276,14 @@ void scorriCartelle(char *dir1, char *dir2){
     DIR * dp1;
         
     struct dirent *entry1;
-    struct stat statbuf1;
         
     if((dp1 = opendir(dir1)) == NULL) {
         fprintf(stderr,"Non riesco ad aprire %s per la lettura: \n", dir1);
-        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", dir1);
+        syslog(LOG_ERR, "Non riesco ad aprire %s per la lettura", dir1);
         exit(-1); 
     }
 
     while((entry1 = readdir(dp1)) != NULL) {
-        
-        stat(entry1->d_name,&statbuf1);
         
         /* Ignora le cartelle ".." e "." */
         if(strcmp(".", entry1-> d_name) == 0 || strcmp("..", entry1->d_name) == 0){
@@ -290,7 +291,7 @@ void scorriCartelle(char *dir1, char *dir2){
         
         }
         
-        if(S_ISREG(statbuf1.st_mode)){
+        if(is_file(entry1 -> d_name)){
             if(findFile(entry1->d_name, dir2)){
                 if(!twoFilesCompare(superStringsCat(dir1, "/", entry1->d_name, NULL), superStringsCat(dir2, "/", entry1->d_name, NULL))){
                     printf("I Files %s/%s e %s/%s sono diversi\n", dir1, entry1->d_name, dir2, entry1->d_name);
@@ -301,7 +302,7 @@ void scorriCartelle(char *dir1, char *dir2){
             }           
         }        
         
-        if(S_ISDIR(statbuf1.st_mode)) { 
+        if(is_dir(entry1 -> d_name)) { 
             if(findDir(entry1->d_name, dir2)){
                 printf("Sottodirectory in comune: %s/%s e %s/%s\n", dir1, entry1->d_name, dir2, entry1->d_name);
             }
@@ -321,7 +322,7 @@ boolean findDir(char *dir1, char* dir2){
     
     if((dp2 = opendir(dir2)) == NULL) {
         fprintf(stderr,"Non riesco ad aprire %s per la lettura: \n", dir2);
-        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", dir2);
+        syslog(LOG_ERR, "Non riesco ad aprire %s per la lettura", dir2);
         exit(-1); 
     }
     
@@ -345,7 +346,7 @@ boolean findFile(char *f1, char* dir2){
     
     if((dp2 = opendir(dir2)) == NULL) {
         fprintf(stderr,"Non riesco ad aprire %s per la lettura: \n", dir2);
-        syslog(LOG_USER, "Non riesco ad aprire %s per la lettura", dir2);
+        syslog(LOG_ERR, "Non riesco ad aprire %s per la lettura", dir2);
         exit(-1); 
     }
     

@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[]){
     
-    openlog("equal", LOG_CONS || LOG_PERROR || LOG_PID, LOG_USER);
+    openlog(argv[0], LOG_CONS || LOG_PID, LOG_LOCAL0);
     
     char name1[40];
     char name2[40];
@@ -18,7 +18,7 @@ int main(int argc, char *argv[]){
     
         
     if(is_file(name1) && is_file(name2)){
-        
+        syslog(LOG_INFO, "Confrontro tra file e file iniziato");
         if(twoFilesCompare(name1, name2)){
             printf("I Files sono uguali\n");
             return (0);
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]){
     }
     
     if(is_file(name1) && is_dir(name2)){
-        
+        syslog(LOG_INFO, "Confrontro tra file e cartella iniziato");
         if(scanDir(name2, name1)){
             printf("I file %s e %s/%s sono uguali\n", name1, name2, name1);
             return (0);
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]){
     }
     
     if(is_dir(name1) && is_file(name2)){
-        
+        syslog(LOG_INFO, "Confrontro tra cartella e file iniziato");
         if(scanDir(name1, name2)){
             printf("I file %s e %s/%s sono uguali\n", name2, name1, name2);
             return (0);
@@ -55,11 +55,13 @@ int main(int argc, char *argv[]){
     }
     
     if(is_dir(name1) && is_dir(name2)){
+        syslog(LOG_INFO, "Confrontro tra cartella e cartella iniziato");
         scorriCartelle(name1, name2);
-        scorriCartelle(name2, name1);
+        syslog(LOG_INFO, "Confronto eseguito");
         return (EXIT_SUCCESS);
     }
     
-    void closelog ();    
+    syslog(LOG_INFO, "Nessun confronto eseguito");
+    closelog();    
     return (EXIT_FAILURE);
 }
