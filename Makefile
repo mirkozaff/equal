@@ -5,7 +5,7 @@
 mkbkp: equal.o funzioni.o
 	gcc -o equal equal.o funzioni.o
 #
-mkbkp.o: mkbkp.c funzioni.h
+mkbkp.o: mkbkp.c
 	gcc -c equal.c
 #
 funzioni.o: funzioni.c
