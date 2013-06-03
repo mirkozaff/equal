@@ -1,3 +1,12 @@
+/**
+ *  Anno Accademico: 2012-2013
+ *  Corso di Studio: Informatica
+ *  Titolo del progetto: Modifica utility di base di GNU/Linux
+ *  Autori: Zaffaroni Mirko n° 151818
+ *	Bonetta Giovanni n° 152122
+ **/
+
+
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
