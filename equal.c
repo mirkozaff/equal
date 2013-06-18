@@ -19,6 +19,12 @@ int main(int argc, char *argv[]){
     
     openlog(argv[0], LOG_CONS || LOG_PID, LOG_LOCAL0);
     
+    if(argc != 3){
+        printf("Errore nell'input\n");
+        syslog(LOG_ERR, "Errore nell'input\n");
+        exit(-1);
+    }
+    
     char name1[40];
     char name2[40];
     
